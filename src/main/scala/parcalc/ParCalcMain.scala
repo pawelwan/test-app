@@ -21,14 +21,13 @@ object ParCalcMain extends App with Directives with JsonSupport {
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
   implicit val timeout = Timeout(120.seconds)
 
-  val basicActor = system.actorOf(BasicActor.props)
-
   val route =
     path("evaluate") {
       post {
         entity(as[EvaluationRequest]) { case EvaluationRequest(exprStr) =>
-          onSuccess(basicActor ? exprStr) {
-            case result: Int =>
+          val parsingActor = system.actorOf(ParsingActor.props)
+          onSuccess(parsingActor ? exprStr) {
+            case result: Double =>
               complete(EvaluationResponse(result))
             case _ =>
               complete(StatusCodes.InternalServerError)
