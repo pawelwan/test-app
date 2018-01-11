@@ -9,16 +9,17 @@ import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 
-import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 import scala.io.StdIn
 
 object ParCalcMain extends App with Directives with JsonSupport {
   val config = ConfigFactory.load()
+  val appIP = config.getString("application.ip")
+  val appPort = config.getInt("application.port")
 
-  implicit val system: ActorSystem = ActorSystem("ParCalcSystem")
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
-  implicit val executionContext: ExecutionContextExecutor = system.dispatcher
+  implicit val system = ActorSystem()
+  implicit val materializer = ActorMaterializer()
+  implicit val executionContext = system.dispatcher
   implicit val timeout = Timeout(120.seconds)
 
   val route =
@@ -27,17 +28,14 @@ object ParCalcMain extends App with Directives with JsonSupport {
         entity(as[EvaluationRequest]) { case EvaluationRequest(exprStr) =>
           val parsingActor = system.actorOf(ParsingActor.props)
           onSuccess(parsingActor ? exprStr) {
-            case result: Double =>
+            case Right(result: Double) =>
               complete(EvaluationResponse(result))
-            case _ =>
-              complete(StatusCodes.InternalServerError)
+            case Left(_) =>
+              complete(StatusCodes.UnprocessableEntity)
           }
         }
       }
     }
-
-  val appIP = config.getString("application.ip")
-  val appPort = config.getInt("application.port")
 
   val bindingFuture = Http().bindAndHandle(route, appIP, appPort)
 
