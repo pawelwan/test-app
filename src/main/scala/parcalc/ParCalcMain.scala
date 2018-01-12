@@ -12,14 +12,9 @@ import com.typesafe.config.ConfigFactory
 import scala.concurrent.duration._
 import scala.io.StdIn
 
-object ParCalcMain extends App with Directives with JsonSupport {
-  val config = ConfigFactory.load()
-  val appIP = config.getString("application.ip")
-  val appPort = config.getInt("application.port")
-
-  implicit val system = ActorSystem()
-  implicit val materializer = ActorMaterializer()
-  implicit val executionContext = system.dispatcher
+trait RestService extends Directives with JsonSupport {
+  implicit val system: ActorSystem
+  implicit val materializer: ActorMaterializer
   implicit val timeout = Timeout(120.seconds)
 
   val route =
@@ -36,6 +31,16 @@ object ParCalcMain extends App with Directives with JsonSupport {
         }
       }
     }
+}
+
+object ParCalcMain extends App with RestService {
+  val config = ConfigFactory.load()
+  val appIP = config.getString("application.ip")
+  val appPort = config.getInt("application.port")
+
+  implicit val system = ActorSystem()
+  implicit val materializer = ActorMaterializer()
+  implicit val executionContext = system.dispatcher
 
   val bindingFuture = Http().bindAndHandle(route, appIP, appPort)
 
