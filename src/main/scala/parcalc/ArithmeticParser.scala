@@ -39,7 +39,9 @@ object ArithmeticParser extends JavaTokenParsers {
   }
 }
 
-sealed class Operation(val apply: (Double, Double) => Double)
+sealed class Operation(op: (Double, Double) => Double) {
+  def apply(x: Double, y: Double) = op(x, y)
+}
 case object Add extends Operation(_ + _)
 case object Sub extends Operation(_ - _)
 case object Mul extends Operation(_ * _)
